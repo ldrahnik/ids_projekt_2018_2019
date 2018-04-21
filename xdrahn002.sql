@@ -12,6 +12,8 @@ CREATE TABLE zamestnanec(
   prijmeni VARCHAR2(255) NOT NULL,
   adresa VARCHAR2(255) NOT NULL,
   cislo_bankovniho_uctu VARCHAR2(255) NOT NULL UNIQUE,
+  /* v současnosti se používají jen první čtyři pozice sedmimístného kódu banky */
+  CHECK (cislo_bankovniho_uctu LIKE '______-__________/____'),
   pozice VARCHAR2(255) NOT NULL 
 );
 
@@ -21,7 +23,9 @@ CREATE TABLE zakaznik(
   prijmeni VARCHAR2(255) NOT NULL,
   adresa VARCHAR2(255) NOT NULL,
   cislo_bankovniho_uctu VARCHAR2(255) NOT NULL UNIQUE,
-  telefonni_cislo VARCHAR2(255) NOT NULL UNIQUE
+  telefonni_cislo VARCHAR2(255) NOT NULL UNIQUE,
+  /* v současnosti se používají jen první čtyři pozice sedmimístného kódu banky */
+  CHECK (cislo_bankovniho_uctu LIKE '______-__________/____')
 );
 
 CREATE TABLE objednavka(
@@ -61,6 +65,21 @@ CREATE TABLE sklad(
   id_surovina NUMBER NOT NULL
 );
 
+ -- Sequence pro - Trigger pro automatické generování hodnot primárního klíče tabulky zakaznik ze sekvence (id začíná na 101 pouze z demonstrativních důvodů)
+ DROP SEQUENCE ZAKAZNIK_SEQ;
+ CREATE SEQUENCE ZAKAZNIK_SEQ
+  START WITH 101
+  INCREMENT BY 1;
+  
+-- Trigger pro automatické generování hodnot primárního klíče tabulky zakaznik ze sekvence
+ CREATE OR REPLACE TRIGGER NASTAV_ZAKAZNIK_ID
+  BEFORE INSERT ON zakaznik
+  FOR EACH ROW
+ BEGIN
+   :new.id := ZAKAZNIK_SEQ.nextval;
+ END NASTAV_ZAKAZNIK_ID;
+ /
+
 ALTER TABLE zamestnanec ADD CONSTRAINT PK_zamestnanec PRIMARY KEY (id);
 ALTER TABLE zakaznik ADD CONSTRAINT PK_zakaznik PRIMARY KEY (id);
 ALTER TABLE objednavka ADD CONSTRAINT PK_objednavka PRIMARY KEY (id);
@@ -84,22 +103,22 @@ INSERT INTO sklad (id, pocet, id_surovina) VALUES('2', '54', '2');
 INSERT INTO sklad (id, pocet, id_surovina) VALUES('3', '330', '3');
 INSERT INTO sklad (id, pocet, id_surovina) VALUES('4', '0', '5');
 
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('1', 'Petr', 'Rychlý', 'U Mostu 5, Brno', '43-12345678/2100', 'ředitel');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('2', 'Honza', 'Veselý', 'U Nádraží 19, Blansko', '27-12345678/2100', 'vrátný');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('3', 'Helena', 'Šťastná', 'Husova 55, Třebíč', '10-12345678/2100', 'pekařka');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('4', 'Světlana', 'Bystrá', 'Masarykova 2, Brno', '11-12345678/2111', 'pekař');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('5', 'David', 'Chytrý', 'Majerova 22, Náměšť nad Oslavou', '11-12345678/2110', 'řidič');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('6', 'Honza', 'Brzobohatý', 'Rosického 212, Brno', '13-12345678/2110', 'řidič');
-INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('7', 'Pavel', 'Skladný', 'Opletalova 665, Šumperk', '14-12345678/2110', 'skladník');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('1', 'Petr', 'Rychlý', 'U Mostu 5, Brno', '000043-0123456789/2100', 'ředitel');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('2', 'Honza', 'Veselý', 'U Nádraží 19, Blansko', '000027-0123456789/2100', 'vrátný');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('3', 'Helena', 'Šťastná', 'Husova 55, Třebíč', '000010-0123456789/2100', 'pekařka');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('4', 'Světlana', 'Bystrá', 'Masarykova 2, Brno', '000011-0123456789/2111', 'pekař');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('5', 'David', 'Chytrý', 'Majerova 22, Náměšť nad Oslavou', '000011-0123456789/2110', 'řidič');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('6', 'Honza', 'Brzobohatý', 'Rosického 212, Brno', '000013-0123456789/2110', 'řidič');
+INSERT INTO zamestnanec (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, pozice) VALUES('7', 'Pavel', 'Skladný', 'Opletalova 665, Šumperk', '000014-0123456789/2110', 'skladník');
 
-INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES('1', 'Lukáš', 'Merlin', 'Božetěchova 1, Brno', '01-12345678/0100', '+420 566 654 444');
-INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES('2', 'Iva', 'Fiv', 'Opařany 210', '02-12345678/0100', '+420 555 333 333');
-INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES('3', 'Čestmír', 'Mirumilovný', 'V Polích, Olomouc', '11-12345678/2110', '+420 666 433');
-INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES('4', 'Kudrna', 'Josef', 'K.H. Borovského, Brno', '11-12345678/2111', '+410 123 456 789');
+INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Lukáš', 'Merlin', 'Božetěchova 1, Brno', '000001-0123456789/0100', '+420 566 654 444');
+INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Iva', 'Fiv', 'Opařany 210', '000002-0123456789/0100', '+420 555 333 333');
+INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Čestmír', 'Mirumilovný', 'V Polích, Olomouc', '000011-0123456789/2110', '+420 666 433');
+INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Kudrna', 'Josef', 'K.H. Borovského, Brno', '000011-0123456789/2111', '+410 123 456 789');
 
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('1', '500', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '1', '1');
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('2', '250', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '1', '4', '4');
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('3', '5000', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '3', '5');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('1', '500', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '101', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('2', '250', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '1', '104', '4');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('3', '5000', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5');
 
 INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('1', 'rohlik', '3', '2');
 INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('2', 'chleba', '22', '1');
@@ -168,7 +187,7 @@ GROUP BY
 ORDER BY
   SUM(objednavka.cena) DESC;
 
--- Spočítá potřebný počet surovin pro všechny druhy pečiva; seřazeno dle počtu (5. dotaz, s GROUP BY)
+-- Spočítá potřebný počet surovin pro všechny druhy pečiva; seřazeno sestupně dle počtu (5. dotaz, s GROUP BY)
 SELECT
   pecivo.nazev,
   COUNT(mnozstvi.id_pecivo)
@@ -178,9 +197,11 @@ FROM
 WHERE
   mnozstvi.id_pecivo (+)= pecivo.id
 GROUP BY
-  pecivo.nazev;
+  pecivo.nazev
+ORDER BY
+  COUNT(mnozstvi.id_pecivo) DESC;
   
--- Vypíše všechny suroviny, které nejsou na sklade VŮBEC; seřazeno dle názvu (6. dotaz, s EXISTS)
+-- Vypíše všechny suroviny, které nejsou na skladě VŮBEC; seřazeno dle názvu (6. dotaz, s EXISTS)
 SELECT
   surovina.nazev
 FROM
@@ -200,3 +221,56 @@ WHERE zamestnanec.id IN (
   (SELECT zamestnanec.id
   FROM zakaznik, objednavka
   WHERE zakaznik.cislo_bankovniho_uctu = zamestnanec.cislo_bankovniho_uctu AND objednavka.id_zakaznik = zakaznik.id ));
+  
+-- Trigger, který při zavolání upraví ceny pečiva
+CREATE OR REPLACE TRIGGER uprav_ceny_peciva
+BEFORE 
+UPDATE OF cena
+ON pecivo 
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+BEGIN
+  /* Pečivo nad 10Kč zdražíme o 50% ceny */
+  IF (:new.cena>10) THEN :new.cena:=:new.cena * 1.5; END IF; 
+  /* Pečivo pod 10Kč zdražíme všechno na 10Kč */
+  IF (:new.cena<10) THEN :new.cena:=10; END IF;
+END;
+/
+
+-- Trigger, který při zavolání upraví ceny pečiva - upravíme cenu chleba na 50Kč, trigger nám upravování hodnoty odchytne a změní na 1.5-násobek
+UPDATE
+  pecivo
+SET 
+  pecivo.cena = 50
+WHERE
+  pecivo.id = 2;
+ 
+-- Trigger, který při zavolání upraví ceny pečiva - vypíšeme ceny pečiva a cenu chleba zkontrolujeme (75Kč) 
+SELECT
+  pecivo.nazev,
+  pecivo.cena
+FROM
+  pecivo
+ORDER BY
+  pecivo.nazev;
+  
+-- Trigger, který při vložení nové objednávky zkontroluje zda neexistuje podobná nedokončená
+CREATE OR REPLACE TRIGGER zkontroluj_podobne_nedokoncene_objednavky
+BEFORE 
+INSERT
+ON objednavka
+FOR EACH ROW
+DECLARE pocet_podobnych_objednavek number;
+BEGIN
+    SELECT COUNT(objednavka.id) INTO pocet_podobnych_objednavek FROM objednavka WHERE objednavka.cena =: NEW.cena AND objednavka.id_zakaznik =: NEW.id_zakaznik AND objednavka.je_zaplacena = 0;
+ 
+    IF pocet_podobnych_objednavek > 0 THEN
+        raise_application_error(-20000, 'You have one uncompleted similar order. Pay that order and try it again.');
+    END IF;
+END;
+/
+
+-- Otestujeme trigger, mělo by dojít k vyhození erroru (jedna podobná nezaplacená objednávka již existuje)
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('4', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5');
+
+  

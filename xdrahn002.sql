@@ -36,6 +36,7 @@ CREATE TABLE objednavka(
   datum_dodani DATE NOT NULL,
   zpusob_dodani VARCHAR2(255) NOT NULL,
   je_zaplacena NUMBER NOT NULL,
+  je_poslana_upominka NUMBER NOT NULL,
   id_zakaznik NUMBER NOT NULL,
   id_zamestnanec NUMBER NOT NULL
 );
@@ -88,7 +89,7 @@ ALTER TABLE pecivo ADD CONSTRAINT PK_pecivo PRIMARY KEY (id);
 ALTER TABLE sklad ADD CONSTRAINT PK_sklad PRIMARY KEY (id);
 
 ALTER TABLE sklad ADD CONSTRAINT FK_surovina FOREIGN KEY(id_surovina) REFERENCES surovina;
-ALTER TABLE pecivo ADD CONSTRAINT FK_objednavka FOREIGN KEY(id_objednavka) REFERENCES objednavka;
+ALTER TABLE pecivo ADD CONSTRAINT FK_objednavka FOREIGN KEY(id_objednavka) REFERENCES objednavka ON DELETE CASCADE;
 ALTER TABLE objednavka ADD CONSTRAINT FK_zakaznik FOREIGN KEY(id_zakaznik) REFERENCES zakaznik;
 ALTER TABLE objednavka ADD CONSTRAINT FK_zamestnanec FOREIGN KEY(id_zamestnanec) REFERENCES zamestnanec;
 
@@ -116,9 +117,9 @@ INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefo
 INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Čestmír', 'Mirumilovný', 'V Polích, Olomouc', '000011-0123456789/2110', '+420 666 433');
 INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'Kudrna', 'Josef', 'K.H. Borovského, Brno', '000011-0123456789/2111', '+410 123 456 789');
 
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('1', '500', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '101', '1');
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('2', '250', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '1', '104', '4');
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('3', '5000', 'převod', '21/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('1', '500', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '101', '1', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('2', '250', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('3', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
 
 INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('1', 'rohlik', '3', '2');
 INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('2', 'chleba', '22', '1');
@@ -254,23 +255,113 @@ FROM
 ORDER BY
   pecivo.nazev;
   
--- Trigger, který při vložení nové objednávky zkontroluje zda neexistuje podobná nedokončená
+-- Trigger, který při vložení nové objednávky zkontroluje zda neexistují podobné nedokončené
 CREATE OR REPLACE TRIGGER zkontroluj_podobne_nedokoncene_objednavky
 BEFORE 
 INSERT
 ON objednavka
 FOR EACH ROW
-DECLARE pocet_podobnych_objednavek number;
+DECLARE 
+    pocet_podobnych_objednavek number;
+    
+    -- Cursor - dotaz kdy byly poslední nezaplacené podobné objednávky vytvořené
+    CURSOR nezaplacene_podobne_objednavky_kurzor IS
+        SELECT objednavka.datum_vytvoreni
+        FROM objednavka 
+        WHERE objednavka.cena =: NEW.cena AND objednavka.id_zakaznik =: NEW.id_zakaznik AND objednavka.je_zaplacena = 0;
+    
+    -- Duplikovaná objednávka odhalena 
+    duplikovana_objednavka EXCEPTION;
+    
+    posledni_objednavka_datum_vytvoreni nezaplacene_podobne_objednavky_kurzor%ROWTYPE;
 BEGIN
-    SELECT COUNT(objednavka.id) INTO pocet_podobnych_objednavek FROM objednavka WHERE objednavka.cena =: NEW.cena AND objednavka.id_zakaznik =: NEW.id_zakaznik AND objednavka.je_zaplacena = 0;
- 
-    IF pocet_podobnych_objednavek > 0 THEN
-        raise_application_error(-20000, 'You have one uncompleted similar order. Pay that order and try it again.');
+    pocet_podobnych_objednavek := 0;
+
+    SELECT COUNT(objednavka.id)
+    INTO pocet_podobnych_objednavek
+    FROM objednavka 
+    WHERE objednavka.cena =: NEW.cena AND objednavka.id_zakaznik =: NEW.id_zakaznik AND objednavka.je_zaplacena = 0;
+    
+    IF pocet_podobnych_objednavek > 0 THEN  
+        BEGIN
+        OPEN nezaplacene_podobne_objednavky_kurzor;
+   
+        LOOP
+           -- Můžeme si vypsat datum vytvoření každé podobné objednávky
+           FETCH nezaplacene_podobne_objednavky_kurzor INTO posledni_objednavka_datum_vytvoreni;
+           EXIT WHEN nezaplacene_podobne_objednavky_kurzor%NOTFOUND;  
+           
+           -- Vyhodíme výjimku, stačí nám najít jedinou podobnou
+           RAISE duplikovana_objednavka;   
+       END LOOP;
+    
+        EXCEPTION   
+            -- Reakce na výjimku při nalezení podobné
+            WHEN duplikovana_objednavka THEN
+                DBMS_OUTPUT.PUT_LINE('Duplikovaná objednávka s velkou pravděpodobností odhalena'); 
+    
+        CLOSE nezaplacene_podobne_objednavky_kurzor; 
+        END;
     END IF;
+
 END;
 /
 
--- Otestujeme trigger, mělo by dojít k vyhození erroru (jedna podobná nezaplacená objednávka již existuje)
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec) VALUES('4', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5');
+-- Otestujeme trigger, mělo by dojít k vyhození erroru (jedna podobná nezaplacená objednávka totiž již existuje)
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('4', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
 
+-- Procedura, která se stará o pročištění objednávek - tedy smazání objednávek starších než 1 měsíc a zároven nezaplacených a zároven kde již byla poslána varovná upomínka
+CREATE OR REPLACE PROCEDURE odstran_stare_objednavky AS
+   BEGIN
+      DELETE 
+      FROM objednavka
+      WHERE objednavka.datum_vytvoreni <= ADD_MONTHS(TRUNC(SYSDATE), -1) AND objednavka.je_zaplacena = 0 AND objednavka.je_poslana_upominka = 1;
+   END;
+/
+
+-- Spustíme proceduru
+BEGIN
+    odstran_stare_objednavky;
+END;
+/
+
+-- Zkontrolujeme proceduru, zda došlo ke smazání 2 objednávek (bylo nutné přidat ON DELETE CASCADE, aby jsme smazali záznamy, které odkazují na záznam, který chceme smazat)
+SELECT
+  COUNT(objednavka.id)
+FROM
+  objednavka
+WHERE
+  objednavka.datum_vytvoreni <= ADD_MONTHS(TRUNC(SYSDATE), -1) AND objednavka.je_zaplacena = 0;
   
+-- Vložíme objednávku pro otestování následující procedury
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('5', '40', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '0');
+  
+-- Procedura, která se stará o spočítání objednávek, které jsou starší než 14 dní a nebyla ještě zaslána upomínka
+CREATE OR REPLACE PROCEDURE spocitej_stare_objednavky_pro_upominku AS
+    objednavky_pocet NUMBER;
+BEGIN
+   SELECT
+      count(objednavka.id)
+   INTO
+      objednavky_pocet
+   FROM 
+      objednavka
+   WHERE
+      objednavka.datum_vytvoreni <= TRUNC(SYSDATE) - 14 AND objednavka.je_zaplacena = 0 AND objednavka.je_poslana_upominka = 0;
+   DBMS_OUTPUT.PUT_LINE('Počet nalezených objednávek kde je potřeba doposlat upozornění: ' || objednavky_pocet); 
+END;
+/
+
+-- Spustíme proceduru
+BEGIN
+    spocitej_stare_objednavky_pro_upominku;
+END;
+/
+
+-- Zkontrolujeme proceduru
+SELECT
+  COUNT(objednavka.id)
+FROM
+  objednavka
+WHERE
+  objednavka.datum_vytvoreni <= TRUNC(SYSDATE) - 14 AND objednavka.je_zaplacena = 0 AND objednavka.je_poslana_upominka = 0;

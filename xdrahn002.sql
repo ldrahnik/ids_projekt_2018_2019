@@ -365,3 +365,11 @@ FROM
   objednavka
 WHERE
   objednavka.datum_vytvoreni <= TRUNC(SYSDATE) - 14 AND objednavka.je_zaplacena = 0 AND objednavka.je_poslana_upominka = 0;
+  
+-- Přistupová práva
+GRANT ALL ON zamestnanec TO xdrahn00;
+GRANT ALL ON zakaznik TO xdrahn00;
+GRANT ALL ON objednavka TO xdrahn00;
+GRANT ALL ON surovina TO xdrahn00;
+GRANT ALL ON pecivo TO xdrahn00;
+GRANT ALL ON sklad TO xdrahn00;

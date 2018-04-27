@@ -5,6 +5,7 @@ DROP TABLE surovina CASCADE CONSTRAINTS;
 DROP TABLE pecivo CASCADE CONSTRAINTS;
 DROP TABLE mnozstvi CASCADE CONSTRAINTS;
 DROP TABLE sklad CASCADE CONSTRAINTS;
+DROP TABLE pecivo_objednavka CASCADE CONSTRAINTS;
 
 CREATE TABLE zamestnanec(
   id NUMBER NOT NULL,
@@ -50,8 +51,14 @@ CREATE TABLE surovina(
 CREATE TABLE pecivo(
   id NUMBER NOT NULL,
   nazev VARCHAR2(255) NOT NULL UNIQUE,
-  cena NUMBER NOT NULL,
-  id_objednavka NUMBER NOT NULL
+  cena NUMBER NOT NULL
+);
+
+CREATE TABLE pecivo_objednavka(
+  id NUMBER NOT NULL,
+  mnozstvi NUMBER NOT NULL,
+  id_objednavka NUMBER NOT NULL,
+  id_pecivo NUMBER NOT NULL
 );
 
 CREATE TABLE mnozstvi(
@@ -87,9 +94,11 @@ ALTER TABLE objednavka ADD CONSTRAINT PK_objednavka PRIMARY KEY (id);
 ALTER TABLE surovina ADD CONSTRAINT PK_surovina PRIMARY KEY (id);
 ALTER TABLE pecivo ADD CONSTRAINT PK_pecivo PRIMARY KEY (id);
 ALTER TABLE sklad ADD CONSTRAINT PK_sklad PRIMARY KEY (id);
+ALTER TABLE pecivo_objednavka ADD CONSTRAINT PK_pecivo_objednavka PRIMARY KEY (id);
 
 ALTER TABLE sklad ADD CONSTRAINT FK_surovina FOREIGN KEY(id_surovina) REFERENCES surovina;
-ALTER TABLE pecivo ADD CONSTRAINT FK_objednavka FOREIGN KEY(id_objednavka) REFERENCES objednavka ON DELETE CASCADE;
+ALTER TABLE pecivo_objednavka ADD CONSTRAINT FK_pecivo FOREIGN KEY(id_pecivo) REFERENCES pecivo;
+ALTER TABLE pecivo_objednavka ADD CONSTRAINT FK_objednavka FOREIGN KEY(id_objednavka) REFERENCES objednavka ON DELETE CASCADE;
 ALTER TABLE objednavka ADD CONSTRAINT FK_zakaznik FOREIGN KEY(id_zakaznik) REFERENCES zakaznik;
 ALTER TABLE objednavka ADD CONSTRAINT FK_zamestnanec FOREIGN KEY(id_zamestnanec) REFERENCES zamestnanec;
 
@@ -120,10 +129,36 @@ INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefo
 INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('1', '500', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '101', '1', '1');
 INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('2', '250', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
 INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('3', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('4', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('5', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('6', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '103', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('7', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '101', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('8', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '102', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('9', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('10', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('11', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('12', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('13', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '104', '4', '1');
 
-INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('1', 'rohlik', '3', '2');
-INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('2', 'chleba', '22', '1');
-INSERT INTO pecivo (id, nazev, cena, id_objednavka) VALUES('3', 'zapečený rohlík se šunkou', '14', '3');
+INSERT INTO pecivo (id, nazev, cena) VALUES('1', 'rohlik', '3');
+INSERT INTO pecivo (id, nazev, cena) VALUES('2', 'rohlik se sýrem', '5');
+INSERT INTO pecivo (id, nazev, cena) VALUES('3', 'chleba', '22');
+INSERT INTO pecivo (id, nazev, cena) VALUES('4', 'zapečený rohlík se šunkou', '14');
+
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(1, 1, 3, 20);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(2, 2, 1, 20);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(3, 2, 2, 20);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(4, 3, 4, 10);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(5, 4, 1, 10);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(6, 5, 1, 10);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(7, 6, 1, 2);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(8, 7, 1, 5);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(9, 8, 1, 20);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(10, 9, 1, 10);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(11, 10, 1, 10);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(12, 11, 1, 15);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(13, 12, 1, 20);
+INSERT INTO pecivo_objednavka (id, id_objednavka, id_pecivo, mnozstvi) VALUES(14, 13, 1, 25);
 
 INSERT INTO mnozstvi (mnozstvi, id_surovina, id_pecivo) VALUES('22', '2', '2');
 INSERT INTO mnozstvi (mnozstvi, id_surovina, id_pecivo) VALUES('23', '1', '2');
@@ -307,8 +342,8 @@ BEGIN
 END;
 /
 
--- Otestujeme trigger, mělo by dojít k vyhození erroru (jedna podobná nezaplacená objednávka totiž již existuje)
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('4', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
+-- Otestujeme trigger, mělo by dojít k vyhození výjimku a výpisu na DBMS (jedna podobná nezaplacená objednávka totiž již existuje)
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('14', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
 
 -- Procedura, která se stará o pročištění objednávek - tedy smazání objednávek starších než 1 měsíc a zároven nezaplacených a zároven kde již byla poslána varovná upomínka
 CREATE OR REPLACE PROCEDURE odstran_stare_objednavky AS
@@ -334,7 +369,7 @@ WHERE
   objednavka.datum_vytvoreni <= ADD_MONTHS(TRUNC(SYSDATE), -1) AND objednavka.je_zaplacena = 0;
   
 -- Vložíme objednávku pro otestování následující procedury
-INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('5', '40', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '0');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('15', '40', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '0');
   
 -- Procedura, která se stará o spočítání objednávek, které jsou starší než 14 dní a nebyla ještě zaslána upomínka
 CREATE OR REPLACE PROCEDURE spocitej_stare_objednavky_pro_upominku AS
@@ -372,4 +407,79 @@ GRANT ALL ON zakaznik TO xdrahn00;
 GRANT ALL ON objednavka TO xdrahn00;
 GRANT ALL ON surovina TO xdrahn00;
 GRANT ALL ON pecivo TO xdrahn00;
+GRANT ALL ON pecivo_objednavka TO xdrahn00;
 GRANT ALL ON sklad TO xdrahn00;
+
+-- Provedení dotazu před použitím EXPLAIN PLAN pro demonstraci funkčnosti
+SELECT
+  zakaznik.jmeno,
+  zakaznik.prijmeni,
+  COUNT(objednavka.id),
+  SUM(objednavka.cena),
+  COUNT(pecivo.id)
+FROM
+  objednavka,
+  zakaznik,
+  pecivo,
+  pecivo_objednavka
+WHERE
+  zakaznik.id = objednavka.id_zakaznik AND pecivo_objednavka.id_objednavka = objednavka.id AND pecivo.id = pecivo_objednavka.id_pecivo AND pecivo.nazev = 'rohlik' AND pecivo_objednavka.mnozstvi > 15
+GROUP BY
+  zakaznik.prijmeni, zakaznik.jmeno, objednavka.id_zakaznik
+ORDER BY
+  SUM(objednavka.cena) DESC;
+
+-- Použití EXPLAIN PLAN pro konkrétní dotaz
+EXPLAIN PLAN FOR
+SELECT
+  zakaznik.jmeno,
+  zakaznik.prijmeni,
+  COUNT(objednavka.id),
+  SUM(objednavka.cena),
+  COUNT(pecivo.id)
+FROM
+  objednavka,
+  zakaznik,
+  pecivo,
+  pecivo_objednavka
+WHERE
+  zakaznik.id = objednavka.id_zakaznik AND pecivo_objednavka.id_objednavka = objednavka.id AND pecivo.id = pecivo_objednavka.id_pecivo AND pecivo.nazev = 'rohlik' AND pecivo_objednavka.mnozstvi > 15
+GROUP BY
+  zakaznik.prijmeni, zakaznik.jmeno, objednavka.id_zakaznik
+ORDER BY
+  SUM(objednavka.cena) DESC;
+
+-- Zobrazení vysvělení dotazu pomocí EXPLAIN PLAN - došlo k uložení do tabulky
+SELECT plan_table_output FROM TABLE(dbms_xplan.display('plan_table',null,'basic'));
+
+-- Ukázka transakce
+
+-- Ukončíme probíhající transakce pokud nějaká existuje
+COMMIT;
+SET TRANSACTION NAME 'ukazkova_transakce';
+
+-- Zdražíme rohlík
+UPDATE pecivo
+    SET pecivo.cena = 100 
+    WHERE pecivo.nazev = 'rohlik'; -- exclusive lock na řádek s názvem rohlík (TX) a subexclusive (SX) lock na tabulku pecivo
+    
+-- Další session nemůže přistoupit k řádku rohlík, protože nezíská lock na tento řádek.
+
+-- Další session může přistoupit k řádku s názvem mimo rohlík, protože získá lock na tento řádek.
+
+-- Záchytný bod -- první zdražení
+SAVEPOINT po_prvnim_zdrazeni_rohliku;
+
+-- Zdražíme rohlík podruhé
+UPDATE pecivo
+    SET pecivo.cena = 200 
+    WHERE pecivo.nazev = 'rohlik';
+
+-- Záchytný bod -- druhé zdražení
+SAVEPOINT po_druhem_zdrazeni_rohliku;
+
+-- Zdražily jsme moc, vrátíme se na SAVEPOINT po prvním zdražení
+ROLLBACK TO SAVEPOINT po_prvnim_zdrazeni_rohliku;
+
+-- Rozhodli jsme se a cenu měnit nebudeme, zrušíme celou transakci (v případě, že chceme potvrdit potvrzuje voláním COMMIT, stejně jako jsme na začátku potvrzovali transakci, která by mohla být nedokončená)
+ROLLBACK;

@@ -1,4 +1,4 @@
-DROP TABLE zamestnanec CASCADE CONSTRAINTS;
+pečiDROP TABLE zamestnanec CASCADE CONSTRAINTS;
 DROP TABLE zakaznik CASCADE CONSTRAINTS;
 DROP TABLE objednavka CASCADE CONSTRAINTS;
 DROP TABLE surovina CASCADE CONSTRAINTS;
@@ -23,8 +23,8 @@ CREATE TABLE zakaznik(
   jmeno VARCHAR2(255) NOT NULL,
   prijmeni VARCHAR2(255) NOT NULL,
   adresa VARCHAR2(255) NOT NULL,
-  cislo_bankovniho_uctu VARCHAR2(255) NOT NULL UNIQUE,
-  telefonni_cislo VARCHAR2(255) NOT NULL UNIQUE,
+  cislo_bankovniho_uctu VARCHAR2(255) NULL UNIQUE,
+  telefonni_cislo VARCHAR2(255) NULL UNIQUE,
   /* v současnosti se používají jen první čtyři pozice sedmimístného kódu banky */
   CHECK (cislo_bankovniho_uctu LIKE '______-__________/____')
 );
@@ -247,7 +247,7 @@ WHERE NOT EXISTS
 ORDER BY
   surovina.nazev;
   
--- Vypíše jméno a přijmení všech zaměstnanců u kterých došlo ke shodě s bankovním učtem u některého zákazníka a zároven některou jeho objednávku vyřizovali (7. dotaz, s IN, s vnořeným SELECT) 
+-- Vypíše jméno a příjmení všech zaměstnanců u kterých došlo ke shodě s bankovním učtem u některého zákazníka a zároven některou jeho objednávku vyřizovali (7. dotaz, s IN, s vnořeným SELECT) 
 SELECT
   zamestnanec.jmeno,
   zamestnanec.prijmeni
@@ -408,54 +408,13 @@ GRANT ALL ON objednavka TO xdrahn00;
 GRANT ALL ON surovina TO xdrahn00;
 GRANT ALL ON pecivo TO xdrahn00;
 GRANT ALL ON pecivo_objednavka TO xdrahn00;
-GRANT ALL ON sklad TO xdrahn00;
-
--- Provedení dotazu před použitím EXPLAIN PLAN pro demonstraci funkčnosti
-SELECT
-  zakaznik.jmeno,
-  zakaznik.prijmeni,
-  COUNT(objednavka.id),
-  SUM(objednavka.cena),
-  COUNT(pecivo.id)
-FROM
-  objednavka,
-  zakaznik,
-  pecivo,
-  pecivo_objednavka
-WHERE
-  zakaznik.id = objednavka.id_zakaznik AND pecivo_objednavka.id_objednavka = objednavka.id AND pecivo.id = pecivo_objednavka.id_pecivo AND pecivo.nazev = 'rohlik' AND pecivo_objednavka.mnozstvi > 15
-GROUP BY
-  zakaznik.prijmeni, zakaznik.jmeno, objednavka.id_zakaznik
-ORDER BY
-  SUM(objednavka.cena) DESC;
-
--- Použití EXPLAIN PLAN pro konkrétní dotaz
-EXPLAIN PLAN FOR
-SELECT
-  zakaznik.jmeno,
-  zakaznik.prijmeni,
-  COUNT(objednavka.id),
-  SUM(objednavka.cena),
-  COUNT(pecivo.id)
-FROM
-  objednavka,
-  zakaznik,
-  pecivo,
-  pecivo_objednavka
-WHERE
-  zakaznik.id = objednavka.id_zakaznik AND pecivo_objednavka.id_objednavka = objednavka.id AND pecivo.id = pecivo_objednavka.id_pecivo AND pecivo.nazev = 'rohlik' AND pecivo_objednavka.mnozstvi > 15
-GROUP BY
-  zakaznik.prijmeni, zakaznik.jmeno, objednavka.id_zakaznik
-ORDER BY
-  SUM(objednavka.cena) DESC;
-
--- Zobrazení vysvělení dotazu pomocí EXPLAIN PLAN - došlo k uložení do tabulky
-SELECT plan_table_output FROM TABLE(dbms_xplan.display('plan_table',null,'basic'));
-
+GRANT ALL ON sklad TO xdrahn00;  
+  
 -- Ukázka transakce
 
 -- Ukončíme probíhající transakce pokud nějaká existuje
 COMMIT;
+
 SET TRANSACTION NAME 'ukazkova_transakce';
 
 -- Zdražíme rohlík
@@ -483,3 +442,133 @@ ROLLBACK TO SAVEPOINT po_prvnim_zdrazeni_rohliku;
 
 -- Rozhodli jsme se a cenu měnit nebudeme, zrušíme celou transakci (v případě, že chceme potvrdit potvrzuje voláním COMMIT, stejně jako jsme na začátku potvrzovali transakci, která by mohla být nedokončená)
 ROLLBACK;
+
+-- Zapneme měření dotazů kvůli použití následků materializovanému pohledu
+SET TIMING ON
+
+SELECT zakaznik.jmeno, zakaznik.prijmeni, COUNT(objednavka.id)
+    FROM zakaznik, objednavka
+    WHERE zakaznik.id = objednavka.id_zakaznik
+    GROUP BY zakaznik.jmeno, zakaznik.prijmeni, objednavka.id_zakaznik
+    ORDER BY COUNT(objednavka.id) DESC;
+    
+-- Materializovaný pohled pro nejvíce nakupující zákazníky
+CREATE MATERIALIZED VIEW nejvice_nakupujici_zakaznici
+AS
+    SELECT zakaznik.jmeno, zakaznik.prijmeni, COUNT(objednavka.id)
+    FROM zakaznik, objednavka
+    WHERE zakaznik.id = objednavka.id_zakaznik
+    GROUP BY zakaznik.jmeno, zakaznik.prijmeni, objednavka.id_zakaznik
+    ORDER BY COUNT(objednavka.id) DESC;
+
+-- Refresh materializovaného pohledu - kvůli aktuálnosti dat a tedy možného použití
+EXEC DBMS_SNAPSHOT.REFRESH('nejvice_nakupujici_zakaznici','C');
+
+-- Zobrazení všech materializovaných pohledů (v tuhle chvíli pouze nejvice_nakupujici_zakaznici)
+SELECT *
+FROM all_snapshots;
+
+SELECT zakaznik.jmeno, zakaznik.prijmeni, COUNT(objednavka.id)
+    FROM zakaznik, objednavka
+    WHERE zakaznik.id = objednavka.id_zakaznik
+    GROUP BY zakaznik.jmeno, zakaznik.prijmeni, objednavka.id_zakaznik
+    ORDER BY COUNT(objednavka.id) DESC;
+        
+-- Zrušení materializovaného pohledu
+DROP MATERIALIZED VIEW nejvice_nakupujici_zakaznici;
+
+-- Vypneme měření dotazů 
+SET TIMING OFF;
+
+-- Zapneme měření dotazů kvůli použití následků vytvoření indexu
+SET TIMING ON;
+
+-- nahrajeme 100 000 zaznamu zakazniku
+INSERT INTO zakaznik SELECT NULL, dbms_random.string('L', 7), dbms_random.string('L', 7), 'xx', NULL, NULL FROM  dual CONNECT BY level <= 10000;
+INSERT INTO zakaznik (id, jmeno, prijmeni, adresa, cislo_bankovniho_uctu, telefonni_cislo) VALUES(NULL, 'odporně dlouhé jméno', 'Kudrna', 'Božetěchova', NULL, NULL);
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('14', '5000', 'převod', '21/JAN/2018', '24/FEB/2018', 'odvoz', '1', '10105', '4', '1');
+
+
+-- Ukázka přidání indexu
+EXPLAIN PLAN FOR SELECT
+  zakaznik.id
+FROM
+  zakaznik
+WHERE   
+  zakaznik.jmeno = 'odporně dlouhé jméno';
+  
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+  
+SELECT
+  zakaznik.id
+FROM
+  zakaznik
+WHERE   
+  zakaznik.jmeno = 'odporně dlouhé jméno';
+  
+  -- Použití EXPLAIN PLAN pro konkrétní dotaz
+EXPLAIN PLAN FOR
+SELECT
+  zakaznik.jmeno,
+  zakaznik.id,
+  COUNT(objednavka.id)
+FROM
+  zakaznik,
+  objednavka
+WHERE
+  zakaznik.jmeno = 'odporně dlouhé jméno' AND zakaznik.id = objednavka.id_zakaznik AND objednavka.cena = 5000
+GROUP BY
+  zakaznik.jmeno, zakaznik.id;
+  
+    SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+  
+CREATE INDEX zakaznik_jmeno_prijmeni_idx ON zakaznik(jmeno);
+
+EXPLAIN PLAN FOR SELECT
+  zakaznik.id
+FROM
+  zakaznik
+WHERE   
+  zakaznik.jmeno = 'odporně dlouhé jméno';
+
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+SELECT
+  zakaznik.id
+FROM
+  zakaznik
+WHERE   
+  zakaznik.jmeno = 'odporně dlouhé jméno';
+  
+SET TIMING OFF;
+
+CREATE INDEX objednavka_cena_zakaznik_idx ON objednavka(cena, id_zakaznik);
+
+-- Provedení dotazu před použitím EXPLAIN PLAN pro demonstraci funkčnosti
+SELECT
+  zakaznik.jmeno,
+  zakaznik.id,
+  COUNT(objednavka.id)
+FROM
+  zakaznik,
+  objednavka
+WHERE
+  zakaznik.jmeno = 'odporně dlouhé jméno' AND zakaznik.id = objednavka.id_zakaznik AND objednavka.cena = 5000
+GROUP BY
+  zakaznik.jmeno, zakaznik.id;
+
+-- Použití EXPLAIN PLAN pro konkrétní dotaz
+EXPLAIN PLAN FOR
+SELECT
+  zakaznik.jmeno,
+  zakaznik.id,
+  COUNT(objednavka.id)
+FROM
+  zakaznik,
+  objednavka
+WHERE
+  zakaznik.jmeno = 'odporně dlouhé jméno' AND zakaznik.id = objednavka.id_zakaznik AND objednavka.cena = 5000
+GROUP BY
+   zakaznik.jmeno, zakaznik.id;
+  
+SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);

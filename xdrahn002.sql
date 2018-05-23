@@ -344,6 +344,7 @@ END;
 
 -- Otestujeme trigger, mělo by dojít k vyhození výjimku a výpisu na DBMS (jedna podobná nezaplacená objednávka totiž již existuje)
 INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('14', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
+INSERT INTO objednavka (id, cena, zpusob_platby, datum_vytvoreni, datum_dodani, zpusob_dodani, je_zaplacena, id_zakaznik, id_zamestnanec, je_poslana_upominka) VALUES('150', '5000', 'převod', '22/FEB/2018', '24/FEB/2018', 'odvoz', '0', '103', '5', '1');
 
 -- Procedura, která se stará o pročištění objednávek - tedy smazání objednávek starších než 1 měsíc a zároven nezaplacených a zároven kde již byla poslána varovná upomínka
 CREATE OR REPLACE PROCEDURE odstran_stare_objednavky AS
